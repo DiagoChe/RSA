@@ -1,0 +1,62 @@
+<html>
+
+<head>
+    <title>Muiti-party Algorithm</title>
+    <script src="https://cdn.bootcss.com/socket.io/2.2.0/socket.io.js"></script>
+    <script type="text/javascript" src="http://ajax.aspnetcdn.com/ajax/jQuery/jquery-3.3.1.min.js"></script>
+    <script type="text/javascript" src="static/comparator-browser.js"></script>
+    <script type="text/javascript">
+        var cmp = require("comparator");
+        $(document).ready(function() {
+            var socket = io();
+            socket.on("gc change top", function(data) {
+                console.log(data);
+                $("#greatest").text(data.name || "* But nobody came");
+            })
+            var key = cmp.generateKeys();
+            var gpa = 0;
+            var last_x;
+            socket.on("compare requestpubkey", function() {
+                socket.emit("compare sendpubkey", cmp.exportPublicKey(key));
+            })
+            socket.on("compare requestc", function(data) {
+                var obj = cmp.generateC(data, gpa);
+                last_x = obj.x;
+                var c = obj.c;
+                socket.emit("compare sendc", c);
+            })
+            socket.on("compare requestarr", function(data) {
+                var arr = cmp.listAllX(key, data, 65537, gpa);
+                socket.emit("compare sendarr", arr);
+            });
+            socket.on("compare requestresult", function(data) {
+                socket.emit("compare sendresult", {
+                    "result": cmp.check(last_x, 65537, data, gpa)
+                });
+            });
+            $("#login").on("click", function() {
+                gpa = Number($("#gpa").val());
+                socket.emit("gc login", {
+                    "name": $("#name").val()
+                })
+                $("#form").hide();
+            });
+        })
+    </script>
+</head>
+
+<body>
+    <h1>Muiti-party Algorithm</h1>
+    <p>基于百万富翁安全多方数据演示</p>
+    <p id="greatest">无输入数据！</p>
+    <div id="form">
+        <p>在保障多方自身数据不被泄露的情况下比较数值ֵ</p>
+        <p>用户名:<input type="text" id="name"></input>
+        </p>
+        <p>您的输入值：<input type="text" id="gpa"></input>
+        </p>
+        <button id="login">Start</button>
+    </div>
+</body>
+
+</html>
